@@ -1,15 +1,44 @@
 import sys
 sys.path.insert(0, './src/')
 from familylink import FamilyLink
+import logging.config
 
-child = FamilyLink()
+LOGGING_CONFIG = {
+    "version": 1,
+    "handlers": {
+        "default": {
+            "class": "logging.StreamHandler",
+            "formatter": "http",
+            "stream": "ext://sys.stderr"
+        }
+    },
+    "formatters": {
+        "http": {
+            "format": "%(levelname)s [%(asctime)s] %(name)s - %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        }
+    },
+    'loggers': {
+        'httpx': {
+            'handlers': ['default'],
+            'level': 'DEBUG',
+        },
+        'httpcore': {
+            'handlers': ['default'],
+            'level': 'DEBUG',
+        },
+    }
+}
+
+logging.config.dictConfig(LOGGING_CONFIG)
+
+child = FamilyLink(browser="txt")
 time_limits = child.get_time_limits()
 applied_time_limits = time_limits['appliedTimeLimits']
 current_limit = None
 devices = []
 
 for limit in applied_time_limits:
-    print(limit)
     device = {}
     device['limit'] = {}
     device['down_time'] = {}
