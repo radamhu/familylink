@@ -50,10 +50,11 @@ def main():
         get_children_time_limits(child)
     pprint(children)
     for child in children:
-        client.set_time_limits(child['id'],
-                               child['first_device']['id'],
-                               child['first_device']['limit']['id'],
-                               child['first_device']['limit']['minutes'] + 5)
+        for device in child['devices']:
+            client.set_time_limits(child['id'],
+                                   device['id'],
+                                   device['limit']['id'],
+                                   device['limit']['minutes'] - 5)
     for child in children:
         get_children_time_limits(child)
     pprint(children)
@@ -77,7 +78,7 @@ def get_children_time_limits(child):
         device['spent_time'] = device['limit']['minutes'] - device['remaining_time']
         device['id'] = limit['deviceId']
         devices.append(device)
-    child['first_device'] = devices[0]
+        child['devices'] = devices
 
 if __name__ == "__main__":
     main()
