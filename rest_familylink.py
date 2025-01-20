@@ -1,48 +1,18 @@
 import sys
 sys.path.insert(0, './src/')
-from pprint import pprint
 import math
-from familylink import FamilyLink
-import logging.config
+import logging
 
-
-
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import urllib.parse
 import json
-# LOGGING_CONFIG = {
-#     "version": 1,
-#     "handlers": {
-#         "default": {
-#             "class": "logging.StreamHandler",
-#             "formatter": "http",
-#             "stream": "ext://sys.stderr"
-#         }
-#     },
-#     "formatters": {
-#         "http": {
-#             "format": "%(levelname)s [%(asctime)s] %(name)s - %(message)s",
-#             "datefmt": "%Y-%m-%d %H:%M:%S",
-#         }
-#     },
-#     'loggers': {
-#         'httpx': {
-#             'handlers': ['default'],
-#             'level': 'DEBUG',
-#         },
-#         'httpcore': {
-#             'handlers': ['default'],
-#             'level': 'DEBUG',
-#         },
-#     }
-# }
+import argparse
 
-# logging.config.dictConfig(LOGGING_CONFIG)
-#
-client = FamilyLink(browser="txt")
-hostName = "localhost"
-serverPort = 8080
-class MyServer(BaseHTTPRequestHandler):
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from familylink import FamilyLink
+logger = logging.getLogger(__name__)
+
+client = None
+class RestFamilylink(BaseHTTPRequestHandler):
     def do_GET(self):
         path = urllib.parse.urlparse(self.path)
         if path.path != '/api':
@@ -64,7 +34,9 @@ class MyServer(BaseHTTPRequestHandler):
             self.end_headers()
             return
         if 'get_members' in query['command']:
-            json_data = get_members()
+            json_data = {}
+            for member in get_members():
+                json_data[member['id']] = member
             self.send_response(200)
             self.send_header(keyword='Content-type', value='application/json')
             self.end_headers()
@@ -191,21 +163,45 @@ def get_members():
     return children
 
 def main():
-    webServer = HTTPServer((hostName, serverPort), MyServer)
-    print("Server started http://%s:%s" % (hostName, serverPort))
+    parser = argparse.ArgumentParser(
+        description="Apply Family Link configuration from CSV file"
+    )
+    parser.add_argument("config_file",
+                        nargs="?",
+                        default="config.csv",
+                        help="Path to the configuration CSV file (default: config.csv)")
+    parser.add_argument(
+         "--cookie-file",
+         default="./cookies.txt",
+         help="Path to the cookie file to use.",
+    )
+    parser.add_argument(
+        "--port",
+        default="8679",
+        help="Port to listen to.",
+    )
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        help="Interface to host to bind to.",
+    )
+    args = parser.parse_args()
+    global client
+    client = FamilyLink(browser="txt", cookie_file_path=args.cookie_file)
+    rest_server = HTTPServer((args.host, int(args.port)), RestFamilylink)
+    logger.info("Server started http://%s:%s" % (args.host, args.port))
 
     try:
-        webServer.serve_forever()
+        rest_server.serve_forever()
     except KeyboardInterrupt:
         pass
 
-    webServer.server_close()
-    print("Server stopped.")
+    rest_server.server_close()
+    logger.info("Server stopped.")
 
 def get_children_time_limits(child):
     time_limits = client.get_time_limits(child['id'])
     applied_time_limits = time_limits['appliedTimeLimits']
-    pprint(applied_time_limits)
     devices = []
     for limit in applied_time_limits:
         device = {}
