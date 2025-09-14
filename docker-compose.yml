@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  familylink:
+    build: .
+    container_name: familylink
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - TZ=${TZ}
+      - PARENT_EMAIL=${PARENT_EMAIL}
+      - PARENT_PASSWORD=${PARENT_PASSWORD}
+      - CHILD_NAME=${CHILD_NAME}
+      - CRON_SCHEDULE=${CRON_SCHEDULE}
+    volumes:
+      - ./config.csv:/data/config.csv:ro
+      - familylink_state:/data
+    # network not special; this hits Family Link over HTTPS
+volumes:
+  familylink_state:
